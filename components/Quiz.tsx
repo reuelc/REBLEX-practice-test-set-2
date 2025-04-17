@@ -29,6 +29,19 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
   const currentQuestion = questions[currentQuestionIndex]
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100
 
+  // Add keyboard event listener for spacebar navigation
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.code === 'Space' && selectedOption && !showResult) {
+        event.preventDefault() // Prevent page scroll
+        handleNext()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [selectedOption, showResult]) // Add dependencies
+
   // Timer effect
   useEffect(() => {
     if (!showResult) {
