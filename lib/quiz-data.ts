@@ -2849,7 +2849,6 @@ export const quizParts: QuizPart[] = [
         options: [
           "a. Yes, as long as Mark is a trusted relative.",
           "b. No, the sale is void because Mark's authority was not in writing.",
-          "b. No, the sale is void because Mark's authority was not in writing.",
           "c. Yes, because verbal authority is enough in real estate transactions.",
           "d. No, because the buyer is not directly related to Jonas."
         ],
