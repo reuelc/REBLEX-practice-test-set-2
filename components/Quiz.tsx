@@ -23,11 +23,17 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
   const [incorrectQuestions, setIncorrectQuestions] = useState<number[]>([])
   const [score, setScore] = useState(0)
   const [timer, setTimer] = useState(0)
+  const [retakeMode, setRetakeMode] = useState(false)
+  const [retakeQuestions, setRetakeQuestions] = useState<QuizQuestion[]>([])
+  const [retakeIndices, setRetakeIndices] = useState<number[]>([])
 
   const router = useRouter()
 
-  const currentQuestion = questions[currentQuestionIndex]
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100
+  const displayQuestions = retakeMode ? retakeQuestions : questions
+  const displayCurrentQuestion = displayQuestions[currentQuestionIndex]
+  const displayTotal = displayQuestions.length
+
+  const progress = ((currentQuestionIndex + 1) / displayTotal) * 100
 
   // Add keyboard event listener for spacebar navigation
   useEffect(() => {
@@ -66,15 +72,26 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
     setSelectedOption(option)
 
     // Save the user's answer
-    const newUserAnswers = [...userAnswers]
-    newUserAnswers[currentQuestionIndex] = option
-    setUserAnswers(newUserAnswers)
-
-    // Check if answer is correct and update score
-    if (option === currentQuestion.correct) {
-      setScore(score + 1)
+    let newUserAnswers
+    if (retakeMode) {
+      newUserAnswers = [...userAnswers]
+      newUserAnswers[currentQuestionIndex] = option
+      setUserAnswers(newUserAnswers)
+      // Check if answer is correct and update score
+      if (option === retakeQuestions[currentQuestionIndex].correct) {
+        setScore(score + 1)
+      } else {
+        setIncorrectQuestions([...incorrectQuestions, currentQuestionIndex])
+      }
     } else {
-      setIncorrectQuestions([...incorrectQuestions, currentQuestionIndex])
+      newUserAnswers = [...userAnswers]
+      newUserAnswers[currentQuestionIndex] = option
+      setUserAnswers(newUserAnswers)
+      if (option === questions[currentQuestionIndex].correct) {
+        setScore(score + 1)
+      } else {
+        setIncorrectQuestions([...incorrectQuestions, currentQuestionIndex])
+      }
     }
   }
 
@@ -83,10 +100,35 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
 
     setSelectedOption(null)
 
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
+    if (retakeMode) {
+      if (currentQuestionIndex < retakeQuestions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1)
+      } else {
+        calculateRetakeResults()
+      }
     } else {
-      calculateResults()
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1)
+      } else {
+        calculateResults()
+      }
+    }
+  }
+
+  const handleRetakeIncorrect = () => {
+    if (quizResult?.incorrectAnswers.length > 0) {
+      // Prepare retake mode with only incorrect questions
+      const indices = incorrectQuestions
+      setRetakeIndices(indices)
+      setRetakeQuestions(indices.map(idx => questions[idx]))
+      setRetakeMode(true)
+      setCurrentQuestionIndex(0)
+      setSelectedOption(null)
+      setUserAnswers(Array(indices.length).fill(""))
+      setShowResult(false)
+      setScore(0)
+      setIncorrectQuestions([])
+      setTimer(0)
     }
   }
 
@@ -102,12 +144,16 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
     setShowResult(true)
   }
 
-  const handleRetakeIncorrect = () => {
-    if (incorrectQuestions.length > 0) {
-      setCurrentQuestionIndex(incorrectQuestions[0])
-      setSelectedOption(null)
-      setShowResult(false)
-    }
+  const calculateRetakeResults = () => {
+    setQuizResult({
+      score,
+      total: retakeQuestions.length,
+      incorrectAnswers: incorrectQuestions.map((index) => ({
+        question: retakeQuestions[index],
+        userAnswer: userAnswers[index],
+      })),
+    })
+    setShowResult(true)
   }
 
   const handleRestart = () => {
@@ -118,6 +164,9 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
     setScore(0)
     setIncorrectQuestions([])
     setTimer(0)
+    setRetakeMode(false)
+    setRetakeQuestions([])
+    setRetakeIndices([])
   }
 
   const handleExit = () => {
@@ -152,7 +201,7 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
             <Progress value={progress} className="h-2 bg-blue-100" indicatorClassName="bg-blue-600" />
             <div className="flex justify-between items-center">
               <div className="text-sm text-gray-600">
-                Question {currentQuestionIndex + 1} of {questions.length}
+                Question {currentQuestionIndex + 1} of {displayTotal}
               </div>
               {!showResult && (
                 <div className="text-sm text-gray-600">
@@ -202,12 +251,12 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="text-lg font-medium bg-gray-50 p-4 rounded-lg">{currentQuestion.question}</div>
+              <div className="text-lg font-medium bg-gray-50 p-4 rounded-lg">{displayCurrentQuestion.question}</div>
 
               <div className="space-y-3">
-                {currentQuestion.options.map((option) => {
+                {displayCurrentQuestion.options.map((option) => {
                   const isSelected = selectedOption === option
-                  const isCorrect = option === currentQuestion.correct
+                  const isCorrect = option === displayCurrentQuestion.correct
                   const showCorrect = isSelected && isCorrect
                   const showIncorrect = isSelected && !isCorrect
 
@@ -235,12 +284,12 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
               {selectedOption && (
                 <div
                   className={`p-4 rounded-lg ${
-                    selectedOption === currentQuestion.correct ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                    selectedOption === displayCurrentQuestion.correct ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
                   }`}
                 >
-                  {selectedOption === currentQuestion.correct
+                  {selectedOption === displayCurrentQuestion.correct
                     ? "Correct!"
-                    : `Incorrect. The correct answer is: ${currentQuestion.correct}`}
+                    : `Incorrect. The correct answer is: ${displayCurrentQuestion.correct}`}
                 </div>
               )}
             </div>
@@ -270,7 +319,7 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
               disabled={!selectedOption}
               className="flex items-center bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
             >
-              {currentQuestionIndex < questions.length - 1 ? "Next" : "Finish"}
+              {currentQuestionIndex < displayTotal - 1 ? "Next" : "Finish"}
             </Button>
           )}
         </CardFooter>
