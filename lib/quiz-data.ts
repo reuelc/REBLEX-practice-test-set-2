@@ -1026,7 +1026,7 @@ export const quizParts: QuizPart[] = [
           "c. Comprehensive Agricultural Reform Plan Extension with Rights",
           "d. Community Agrarian Reform Program Extension with Rights"
         ],
-        correct: "a. Comprehensive Agricultural Reform Program Extension with Reforms"
+        correct: "b. Comprehensive Agrarian Reform Program Extension with Reforms"
       },
       {
         question: "What is the main feature of the CARPER law?",
