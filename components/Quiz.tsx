@@ -26,6 +26,7 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
   const [retakeMode, setRetakeMode] = useState(false)
   const [retakeQuestions, setRetakeQuestions] = useState<QuizQuestion[]>([])
   const [retakeIndices, setRetakeIndices] = useState<number[]>([])
+  const [debugIncorrectQuestions, setDebugIncorrectQuestions] = useState<string[]>([])
 
   const router = useRouter()
 
@@ -116,19 +117,20 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
   }
 
   const handleRetakeIncorrect = () => {
-    if (quizResult?.incorrectAnswers.length > 0) {
-      // Prepare retake mode with only incorrect questions
-      const indices = incorrectQuestions
+    // Determine which question set to use for indices and mapping
+    const baseQuestions = retakeMode ? retakeQuestions : questions
+    // Use the latest incorrect questions relative to the current question set
+    const indices = incorrectQuestions
+    if (indices.length > 0) {
       setRetakeIndices(indices)
-      setRetakeQuestions(indices.map(idx => questions[idx]))
+      setRetakeQuestions(indices.map(idx => baseQuestions[idx]))
       setRetakeMode(true)
       setCurrentQuestionIndex(0)
-      setSelectedOption(null)
-      setUserAnswers(Array(indices.length).fill(""))
-      setShowResult(false)
       setScore(0)
       setIncorrectQuestions([])
-      setTimer(0)
+      setUserAnswers(Array(indices.length).fill(""))
+      // For debugging: show the questions being served
+      setDebugIncorrectQuestions(indices.map(idx => baseQuestions[idx]?.question || `Q${idx+1}`))
     }
   }
 
@@ -213,6 +215,16 @@ export default function Quiz({ questions, title, partId }: QuizProps) {
         </CardHeader>
 
         <CardContent>
+          {debugIncorrectQuestions.length > 0 && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded">
+              <div className="font-bold text-yellow-700">[DEBUG] Questions served as incorrect this retake:</div>
+              <ul className="list-disc pl-5 text-yellow-800">
+                {debugIncorrectQuestions.map((q, i) => (
+                  <li key={i}>{q}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {showResult ? (
             <div className="space-y-6">
               <div className="text-center">
